@@ -1,0 +1,56 @@
+import requests
+import xml.etree.ElementTree as ET
+import os
+
+# 1. 수집할 법령 리스트 (법령명: MST 번호)
+# MST 번호는 국가법령정보센터에서 확인 가능한 고유 번호야.
+LAWS_TO_FETCH = {
+    "사립학교법": "260682",
+    "사립학교법 시행령": "259344",
+    "사립학교법 시행규칙": "250462",
+    "사학기관 재무·회계 규칙": "253503",
+    "사학기관 재무·회계 규칙에 대한 특례규칙": "249845",
+    "학교기업 회계처리 규칙": "210411"
+}
+
+import os
+API_KEY = os.environ.get("LAW_API_KEY") # 실제 사용 시 GitHub Secrets에 저장해
+BASE_URL = "http://www.law.go.kr/DRF/lawService.do"
+
+def fetch_law(law_name, mst):
+    params = {
+        "OC": API_KEY,
+        "target": "law",
+        "MST": mst,
+        "type": "XML"
+    }
+    
+    response = requests.get(BASE_URL, params=params)
+    if response.status_code != 200:
+        print(f"[{law_name}] 가져오기 실패")
+        return
+
+    # XML 파싱
+    root = ET.fromstring(response.content)
+    
+    # 파일 저장 (노트북LM용 마크다운 형식)
+    filename = f"laws/{law_name}.md"
+    os.makedirs("laws", exist_ok=True)
+    
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(f"# {law_name}\n\n")
+        # 조문(Article) 데이터 추출 루프
+        for jo in root.findall(".//조문단위"):
+            jo_title = jo.findtext("조문내용")
+            f.write(f"## {jo_title}\n")
+            
+            # 항(Paragraph) 데이터 추출
+            for hang in jo.findall(".//항내용"):
+                f.write(f"{hang.text}\n")
+            f.write("\n")
+
+    print(f"[{law_name}] 업데이트 완료")
+
+if __name__ == "__main__":
+    for name, mst in LAWS_TO_FETCH.items():
+        fetch_law(name, mst)
