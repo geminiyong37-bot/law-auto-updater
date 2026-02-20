@@ -9,7 +9,6 @@ from googleapiclient.http import MediaFileUpload
 # 환경 변수 및 설정
 OC_ID = os.environ.get("LAW_API_KEY")
 GDRIVE_JSON_RAW = os.environ.get("GDRIVE_JSON_RAW")
-# 메인 폴더 ID (Laws-Folder의 ID)
 PARENT_FOLDER_ID = "16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q"
 
 SEARCH_URL = "http://www.law.go.kr/DRF/lawSearch.do"
@@ -21,68 +20,62 @@ LAWS_TO_FETCH = {
 }
 
 def get_gdrive_service():
+    if not GDRIVE_JSON_RAW:
+        raise ValueError("GDRIVE_JSON_RAW 환경 변수가 없습니다.")
     creds_dict = json.loads(GDRIVE_JSON_RAW)
     creds = service_account.Credentials.from_service_account_info(creds_dict)
     return build('drive', 'v3', credentials=creds)
 
 def get_or_create_folder(service, folder_name, parent_id):
-    """구글 드라이브 내에서 폴더를 찾거나 없으면 생성"""
     query = f"name = '{folder_name}' and '{parent_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
     results = service.files().list(q=query, fields="files(id)").execute()
     files = results.get('files', [])
-    
     if files:
         return files[0]['id']
     else:
-        file_metadata = {
-            'name': folder_name,
-            'parents': [parent_id],
-            'mimeType': 'application/vnd.google-apps.folder'
-        }
+        file_metadata = {'name': folder_name, 'parents': [parent_id], 'mimeType': 'application/vnd.google-apps.folder'}
         folder = service.files().create(body=file_metadata, fields='id').execute()
         return folder.get('id')
 
 def upload_to_gdrive(service, file_path, file_name, folder_id):
-    """특정 폴더 내에 파일을 업로드하거나 업데이트"""
     query = f"name = '{file_name}' and '{folder_id}' in parents and trashed = false"
     results = service.files().list(q=query, fields="files(id)").execute()
     files = results.get('files', [])
-
     media = MediaFileUpload(file_path, mimetype='text/markdown', resumable=True)
 
     if files:
         file_id = files[0]['id']
         service.files().update(fileId=file_id, media_body=media).execute()
-        print(f"업데이트 완료: {file_name}")
+        print(f"구글 드라이브 업데이트 완료: {file_name}")
     else:
         file_metadata = {'name': file_name, 'parents': [folder_id]}
         service.files().create(body=file_metadata, media_body=media).execute()
-        print(f"새 파일 생성 완료: {file_name}")
+        print(f"구글 드라이브 새 파일 생성: {file_name}")
 
 def fetch_law_body():
     service = get_gdrive_service()
-    
     for category, law_names in LAWS_TO_FETCH.items():
-        # 1. 카테고리별 하위 폴더(기본법/회계규칙) ID 확보
         category_folder_id = get_or_create_folder(service, category, PARENT_FOLDER_ID)
-        
         for name in law_names:
-            # MST 조회 및 법령 본문 수집 로직 (기존과 동일)
             params = {"OC": OC_ID, "target": "law", "query": name, "type": "XML"}
             try:
+                # 1. MST 조회
                 search_res = requests.get(SEARCH_URL, params=params)
-                mst = ET.fromstring(search_res.content).findtext(".//법령일련번호")
-                if not mst: continue
+                root_search = ET.fromstring(search_res.content)
+                mst = root_search.findtext(".//법령일련번호")
+                if not mst:
+                    print(f"MST 못 찾음: {name}")
+                    continue
 
+                # 2. 본문 수집
                 params_body = {"OC": OC_ID, "target": "law", "MST": mst, "type": "XML"}
                 response = requests.get(SERVICE_URL, params=params_body)
                 root = ET.fromstring(response.content)
-                
-                # 로컬 저장
-                path = f"laws/{category}"
-                os.makedirs(path, exist_ok=True)
-                file_full_path = f"{path}/{name}.md"
-                
+
+                # 3. 로컬 파일 저장
+                folder_path = f"laws/{category}"
+                os.makedirs(folder_path, exist_ok=True)
+                file_full_path = os.path.join(folder_path, f"{name}.md")
                 with open(file_full_path, "w", encoding="utf-8") as f:
                     f.write(f"# {name}\n\n")
                     for jo in root.findall(".//조문단위"):
@@ -92,11 +85,11 @@ def fetch_law_body():
                             if hang.text: f.write(f"{hang.text}\n")
                         f.write("\n")
                 
-                # 2. 구글 드라이브 하위 폴더에 파일 업로드
+                # 4. 드라이브 업로드 (파일 닫힌 후 실행)
                 upload_to_gdrive(service, file_full_path, f"{name}.md", category_folder_id)
-                
             except Exception as e:
                 print(f"작업 실패 ({name}): {e}")
 
+# 바로 이 부분이 "시작 버튼"이야! 이 아래까지 다 복사해야 해.
 if __name__ == "__main__":
     fetch_law_body()
