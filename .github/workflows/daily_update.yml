@@ -1,41 +1,53 @@
-name: Daily Law Update
+name: Daily Law Update & Sync
 
 on:
-  workflow_dispatch:      # 수동 실행용
+  workflow_dispatch:
   schedule:
-    - cron: '0 19 * * *' # 매일 새벽 4시
+    - cron: '0 19 * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+
       - name: Install dependencies
-        run: pip install requests
-      - name: Run script
+        run: |
+          pip install requests
+          sudo apt-get install rclone
+
+      - name: Run Law Scraper
         run: python update_laws.py
         env:
           LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
-      - name: Commit and Push
+
+      - name: Commit and Push (GitHub)
         run: |
           git config --global user.name "AutoUpdater"
           git config --global user.email "auto@updater.com"
-          
-          # 1. 현재 작업한 파일(새로 받은 법령)을 잠시 임시 보관함(stash)에 넣어둬
           git add .
           git stash
-          
-          # 2. 서버의 최신 코드를 가져와서 합쳐
           git pull --rebase origin main
-          
-          # 3. 보관함에 넣었던 법령 파일들을 다시 꺼내
           git stash pop || echo "No changes to pop"
-          
-          # 4. 이제 진짜로 저장소에 올려
           git add .
           git commit -m "Update laws (Auto Lookup)" || exit 0
           git push
+
+      - name: Sync to Google Drive
+        run: |
+          # rclone 설정 파일을 즉석에서 생성
+          cat <<EOF > rclone.conf
+          [gdrive]
+          type = drive
+          service_account_contents = ${{ secrets.GDRIVE_SA_JSON }}
+          team_drive = 
+          EOF
+          
+          # laws 폴더를 구글 드라이브의 '자동수집법령' 폴더로 동기화
+          # 주의: '자동수집법령'은 메리아스가 드라이브에 만든 폴더 이름과 똑같아야 해!
+          rclone --config rclone.conf sync ./laws gdrive:laws_folder -v
