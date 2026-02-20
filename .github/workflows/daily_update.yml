@@ -3,7 +3,7 @@ name: Daily Law Update
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 19 * * *' # 한국 시간 새벽 4시
+    - cron: '0 19 * * *'
 
 jobs:
   build:
@@ -15,25 +15,22 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: Install dependencies
-        run: |
-          pip install requests google-api-python-client google-auth
+        run: pip install requests
 
-      - name: Run Law Update and Upload
-        run: |
-          mkdir -p laws
-          python update_laws.py
+      - name: Run Law Update Script
+        run: python update_laws.py
         env:
           LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
-          GDRIVE_JSON_RAW: ${{ secrets.GDRIVE_SA_JSON }}
-          GDRIVE_FOLDER_ID: "16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q"
 
-      - name: Commit and Push Laws (GitHub)
-        run: |
-          git config --global user.name "AutoUpdater"
-          git config --global user.email "auto@updater.com"
-          git add laws/
-          git commit -m "Update laws: $(date +'%Y-%m-%d')" || exit 0
-          git push
+      # 구글 드라이브로 laws 폴더 통째로 업로드
+      - name: Upload to Google Drive
+        uses: adityak74/google-drive-upload-git-action@main
+        with:
+          credentials: ${{ secrets.GDRIVE_SA_JSON }}
+          filename: laws/** # laws 폴더 내 모든 하위 폴더와 파일 포함
+          folderId: 16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q # Laws-Folder ID
+          overwrite: true
+          mirrorDirectoryStructure: true # 기본법/회계규칙 폴더 구조 유지
