@@ -33,15 +33,13 @@ jobs:
           git commit -m "Update laws" || exit 0
           git push
 
-      - name: Sync to Google Drive (rclone)
+       - name: Sync to Google Drive (rclone)
         uses: wei/rclone@v1
         env:
+          # 여기서 'GDRIVE'라는 단어가 rclone의 리모트 이름이 돼!
           RCLONE_CONFIG_GDRIVE_TYPE: drive
           RCLONE_CONFIG_GDRIVE_SCOPE: drive
-          # Secrets에 저장한 JSON 키를 직접 사용
           RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CONTENTS: ${{ secrets.GDRIVE_CREDENTIALS }}
-          # 구글 드라이브 내에 생성될 폴더 ID (생략 시 루트에 생성)
-          # RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
         with:
-          # 로컬의 laws 폴더를 구글 드라이브의 laws_folder로 복사
-          args: copy ./laws gdrive:laws-folder
+          # 위에서 설정한 이름(GDRIVE)을 여기서 똑같이 써줘야 해
+          args: copy ./laws GDRIVE:laws-folder
