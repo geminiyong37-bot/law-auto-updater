@@ -36,10 +36,11 @@ jobs:
        - name: Sync to Google Drive (rclone)
         uses: wei/rclone@v1
         env:
-          # 여기서 'GDRIVE'라는 단어가 rclone의 리모트 이름이 돼!
+          # 'GDRIVE'라는 이름으로 리모트 설정을 생성해
           RCLONE_CONFIG_GDRIVE_TYPE: drive
           RCLONE_CONFIG_GDRIVE_SCOPE: drive
+          # 비밀 금고(Secrets)에 저장된 JSON 키 내용을 불러와 인증해
           RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CONTENTS: ${{ secrets.GDRIVE_CREDENTIALS }}
         with:
-          # 위에서 설정한 이름(GDRIVE)을 여기서 똑같이 써줘야 해
+          # 위에서 정의한 리모트 이름 'GDRIVE'를 그대로 사용해 전송해
           args: copy ./laws GDRIVE:laws-folder
