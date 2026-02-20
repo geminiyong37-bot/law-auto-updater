@@ -24,6 +24,7 @@ jobs:
         run: |
           git config --global user.name "AutoUpdater"
           git config --global user.email "auto@updater.com"
+          git pull --rebase origin main  # 이 줄을 추가해서 충돌을 방지해!
           git add .
           git commit -m "Update laws" || exit 0
           git push
