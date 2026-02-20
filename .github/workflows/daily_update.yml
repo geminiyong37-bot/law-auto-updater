@@ -48,6 +48,6 @@ jobs:
         with:
           credentials: ${{ secrets.GDRIVE_SA_JSON }}
           filename: laws/* # laws 폴더 안의 모든 파일을 올림
-          folderId: ${{ 16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q }} # 폴더 ID는 Secret에 저장해서 쓰는 걸 추천!
+          folderId: "16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q"
           overwrite: true # 이미 있으면 덮어쓰기
           mirrorDirectoryStructure: true # 폴더 구조 유지
