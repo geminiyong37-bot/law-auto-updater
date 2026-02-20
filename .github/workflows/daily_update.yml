@@ -21,7 +21,10 @@ jobs:
         run: pip install requests
 
       - name: Run Law Update Script
-        run: python update_laws.py
+        run: |
+          # laws 폴더가 없으면 미리 생성 (스크립트 에러 방지)
+          mkdir -p laws
+          python update_laws.py
         env:
           LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
 
@@ -29,26 +32,13 @@ jobs:
         run: |
           git config --global user.name "AutoUpdater"
           git config --global user.email "auto@updater.com"
-          git pull --rebase origin main
-          git add .
-          git commit -m "Update laws" || exit 0
+          git add laws/  # laws 폴더 내의 변경사항만 집중적으로 추가
+          git commit -m "Update laws: $(date +'%Y-%m-%d')" || exit 0
           git push
 
-      - name: Sync to Google Drive (rclone)
-        run: |
-          # 1. rclone 설치
-          sudo apt-get update && sudo apt-get install -y rclone
-          
-          # 2. 서비스 계정 키를 별도 파일로 먼저 생성
-          echo '${{ secrets.GDRIVE_SA_JSON }}' > sa_key.json
-          
-          # 3. rclone.conf 설정 (내용을 변수로 넣지 말고 파일 경로를 참조하게 함)
-          cat <<EOF > rclone.conf
-          [GDRIVE]
-          type = drive
-          scope = drive
-          service_account_file = ./sa_key.json
-          EOF
-          
-          # 4. 데이터 전송 실행
-          rclone --config ./rclone.conf copy ./laws GDRIVE:laws-folder
+      # (선택 사항) GitHub UI에서 직접 zip 파일로 다운로드하고 싶을 때 사용
+      - name: Upload Laws Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: law-files-snapshot
+          path: laws/
