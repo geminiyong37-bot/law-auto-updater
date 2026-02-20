@@ -1,9 +1,9 @@
-name: Daily Law Update & Sync
+name: Daily Law Update
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 19 * * *'
+    - cron: '0 19 * * *' # 한국 시간 새벽 4시
 
 jobs:
   build:
@@ -17,37 +17,31 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: |
-          pip install requests
-          sudo apt-get install rclone
+        run: pip install requests
 
-      - name: Run Law Scraper
+      - name: Run Law Update Script
         run: python update_laws.py
         env:
           LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
 
-      - name: Commit and Push (GitHub)
+      - name: Commit and Push Laws
         run: |
           git config --global user.name "AutoUpdater"
           git config --global user.email "auto@updater.com"
-          git add .
-          git stash
           git pull --rebase origin main
-          git stash pop || echo "No changes to pop"
           git add .
-          git commit -m "Update laws (Auto Lookup)" || exit 0
+          git commit -m "Update laws" || exit 0
           git push
 
-      - name: Sync to Google Drive
-        run: |
-          # rclone 설정 파일을 즉석에서 생성
-          cat <<EOF > rclone.conf
-          [gdrive]
-          type = drive
-          service_account_contents = ${{ secrets.GDRIVE_SA_JSON }}
-          team_drive = 
-          EOF
-          
-          # laws 폴더를 구글 드라이브의 '자동수집법령' 폴더로 동기화
-          # 주의: '자동수집법령'은 메리아스가 드라이브에 만든 폴더 이름과 똑같아야 해!
-          rclone --config rclone.conf sync ./laws gdrive:laws-folder -v
+      - name: Sync to Google Drive (rclone)
+        uses: wei/rclone@v1
+        env:
+          RCLONE_CONFIG_GDRIVE_TYPE: drive
+          RCLONE_CONFIG_GDRIVE_SCOPE: drive
+          # Secrets에 저장한 JSON 키를 직접 사용
+          RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CONTENTS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          # 구글 드라이브 내에 생성될 폴더 ID (생략 시 루트에 생성)
+          # RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        with:
+          # 로컬의 laws 폴더를 구글 드라이브의 laws_folder로 복사
+          args: copy ./laws gdrive:laws-folder
