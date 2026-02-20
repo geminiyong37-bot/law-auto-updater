@@ -45,14 +45,6 @@ jobs:
 
       - name: Get File List
         run: |
-          # 업로드할 파일 목록을 한 줄로 만들어서 환경 변수에 저장
-          echo "FILES=$(find laws -type f | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_ENV
-
-      - name: Upload Laws-Folder to Google Drive
-        uses: adityak74/google-drive-upload-git-action@main
-        with:
-          credentials: ${{ secrets.GDRIVE_SA_JSON }}
-          filename: ${{ env.FILES }} # 위에서 찾은 실제 파일 경로들을 직접 전달
-          folderId: "16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q"
-          overwrite: true
-          mirrorDirectoryStructure: true
+          # 파일 경로 하나하나를 따옴표로 감싸서 전달
+          FILES=$(find laws -type f -name "*.md" | sed "s/.*/'&'/" | tr '\n' ',')
+          echo "FILES=${FILES%,}" >> $GITHUB_ENV
