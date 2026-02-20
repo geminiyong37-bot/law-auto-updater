@@ -18,34 +18,22 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install requests
-
-      - name: Run Law Update Script
         run: |
-          # laws 폴더가 없으면 미리 생성 (스크립트 에러 방지)
+          pip install requests google-api-python-client google-auth
+
+      - name: Run Law Update and Upload
+        run: |
           mkdir -p laws
           python update_laws.py
         env:
           LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
+          GDRIVE_JSON_RAW: ${{ secrets.GDRIVE_SA_JSON_RAW }}
+          GDRIVE_FOLDER_ID: "16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q"
 
-      - name: Commit and Push Laws
+      - name: Commit and Push Laws (GitHub)
         run: |
           git config --global user.name "AutoUpdater"
           git config --global user.email "auto@updater.com"
-          git add laws/  # laws 폴더 내의 변경사항만 집중적으로 추가
+          git add laws/
           git commit -m "Update laws: $(date +'%Y-%m-%d')" || exit 0
           git push
-
-      # (선택 사항) GitHub UI에서 직접 zip 파일로 다운로드하고 싶을 때 사용
-      - name: Upload Laws Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: law-files-snapshot
-          path: laws/
-
-      - name: Run Law Update Script
-        run: python update_laws.py
-        env:
-          LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
-          GDRIVE_JSON_RAW: ${{ secrets.GDRIVE_SA_JSON_RAW }} # JSON 원본
-          GDRIVE_FOLDER_ID: "16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q"
