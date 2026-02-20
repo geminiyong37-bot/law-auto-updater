@@ -3,7 +3,7 @@ name: Daily Law Update
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 19 * * *'
+    - cron: '0 19 * * *' # 한국 시간 새벽 4시
 
 jobs:
   build:
@@ -25,6 +25,16 @@ jobs:
         env:
           LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
 
+      # 깃허브에 업데이트된 파일을 먼저 커밋 (이력 관리)
+      - name: Commit and Push Laws
+        run: |
+          git config --global user.name "AutoUpdater"
+          git config --global user.email "auto@updater.com"
+          git add laws/
+          git commit -m "Update laws: $(date +'%Y-%m-%d')" || exit 0
+          git push
+
+      # rclone을 사용하여 구글 드라이브로 완전 자동 전송
       - name: Upload to Google Drive (rclone)
         uses: wei/rclone@v1
         env:
@@ -32,5 +42,5 @@ jobs:
           RCLONE_CONFIG_GDRIVE_SCOPE: drive
           RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CONTENTS: ${{ secrets.GDRIVE_SA_JSON }}
         with:
-          # laws 폴더의 파일들을 지정된 ID의 폴더로 복사
-          args: copy ./laws gdrive:16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q --drive-upload-cutoff=0
+          # laws 폴더의 파일들을 지정된 폴더 ID로 복사 (에러 우회 옵션 포함)
+          args: copy ./laws gdrive:16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q --drive-upload-cutoff=0 --drive-use-trash=false
