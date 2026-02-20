@@ -1,56 +1,29 @@
-import os
-import requests
-import xml.etree.ElementTree as ET
+name: Daily Law Update
 
-# 가이드에 명시된 기본 호출 주소
-BASE_URL = "http://www.law.go.kr/DRF/lawService.do"
+on:
+  workflow_dispatch:      # 수동 실행용
+  schedule:
+    - cron: '0 19 * * *' # 매일 새벽 4시
 
-# 1. 환경 설정 (GitHub Secrets에서 가져옴)
-OC_ID = "kimsb"  # 여기에 본인의 로그인 아이디를 직접 적거나, 이것도 Secret에 넣어도 돼!
-
-# 2. 수집할 법령 및 카테고리 (가이드의 MST 기준)
-LAWS_TO_FETCH = {
-    "기본법": {"사립학교법": "260682",
-            "사립학교법 시행령": "259344",
-        "사립학교법 시행규칙": "250462"
-        },
-    "회계규칙": {
-        "사학기관 재무·회계 규칙": "253503",
-        "사학기관 재무·회계 규칙에 대한 특례규칙": "249845",
-        "학교기업 회계처리 규칙": "210411"
-    },
-
-def fetch_law_and_save():
-    for category, laws in LAWS_TO_FETCH.items():
-        for law_name, mst in laws.items():
-            # 가이드 규격에 따른 파라미터 설정
-            params = {
-                "OC": OC_ID,
-                "target": "law",
-                "MST": mst,
-                "type": "XML"
-            }
-            
-            response = requests.get(BASE_URL, params=params)
-            if "인증되지 않은 사용자" in response.text:
-                print(f"오류: OC ID 또는 API Key를 확인해줘.")
-                return
-
-            # 폴더 생성 및 마크다운 저장
-            path = f"laws/{category}"
-            os.makedirs(path, exist_ok=True)
-            
-            root = ET.fromstring(response.content)
-            with open(f"{path}/{law_name}.md", "w", encoding="utf-8") as f:
-                f.write(f"# {law_name}\n\n")
-                # 조문 내용 추출 (가이드 XML 구조 반영)
-                for jo in root.findall(".//조문단위"):
-                    title = jo.findtext("조문내용")
-                    f.write(f"## {title}\n")
-                    for hang in jo.findall(".//항내용"):
-                        f.write(f"{hang.text}\n")
-                    f.write("\n")
-            print(f"[{category}] {law_name} 업데이트 완료")
-
-if __name__ == "__main__":
-    fetch_law_and_save()
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: pip install requests
+      - name: Run script
+        run: python update_laws.py
+        env:
+          LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
+      - name: Commit and Push
+        run: |
+          git config --global user.name "AutoUpdater"
+          git config --global user.email "auto@updater.com"
+          git add .
+          git commit -m "Update laws" || exit 0
+          git push
