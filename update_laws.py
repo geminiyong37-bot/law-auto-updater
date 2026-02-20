@@ -1,3 +1,22 @@
+# 스크립트 상단에 추가
+import os
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+
+def upload_to_gdrive(file_path, folder_id):
+    # Secret에서 가져온 JSON 값을 환경변수로 읽음
+    info = json.loads(os.environ['GDRIVE_JSON_RAW']) # Base64 안 해도 됨
+    creds = service_account.Credentials.from_service_account_info(info)
+    service = build('drive', 'v3', credentials=creds)
+
+    file_metadata = {
+        'name': os.path.basename(file_path),
+        'parents': [folder_id]
+    }
+    media = MediaFileUpload(file_path, resumable=True)
+    service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+    
 import os
 import requests
 import xml.etree.ElementTree as ET
