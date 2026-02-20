@@ -27,7 +27,7 @@ jobs:
           python update_laws.py
         env:
           LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
-          GDRIVE_JSON_RAW: ${{ secrets.GDRIVE_SA_JSON_RAW }}
+          GDRIVE_JSON_RAW: ${{ secrets.GDRIVE_SA_JSON }}
           GDRIVE_FOLDER_ID: "16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q"
 
       - name: Commit and Push Laws (GitHub)
