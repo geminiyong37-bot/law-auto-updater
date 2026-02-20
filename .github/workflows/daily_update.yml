@@ -25,12 +25,11 @@ jobs:
         env:
           LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
 
-      # 구글 드라이브로 laws 폴더 통째로 업로드
+      # laws 폴더 내의 모든 .md 파일을 구글 드라이브 폴더로 업로드
       - name: Upload to Google Drive
         uses: adityak74/google-drive-upload-git-action@main
         with:
           credentials: ${{ secrets.GDRIVE_SA_JSON }}
-          filename: laws/** # laws 폴더 내 모든 하위 폴더와 파일 포함
+          filename: laws/*.md
           folderId: 16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q # Laws-Folder ID
           overwrite: true
-          mirrorDirectoryStructure: true # 기본법/회계규칙 폴더 구조 유지
