@@ -39,15 +39,16 @@ jobs:
           # 1. rclone 설치
           sudo apt-get update && sudo apt-get install -y rclone
           
-          # 2. 임시 rclone.conf 파일 생성 (리모트 이름을 GDRIVE로 고정)
-          echo "[GDRIVE]" > rclone.conf
-          echo "type = drive" >> rclone.conf
-          echo "scope = drive" >> rclone.conf
-          # 금고에서 가져온 JSON 내용을 파일에 직접 박아넣음
-          echo "service_account_contents = $GDRIVE_JSON" >> rclone.conf
+          # 2. 서비스 계정 키를 별도 파일로 먼저 생성
+          echo '${{ secrets.GDRIVE_SA_JSON }}' > sa_key.json
           
-          # 3. 데이터 전송 실행 (--config 옵션으로 위에서 만든 파일을 직접 지정)
+          # 3. rclone.conf 설정 (내용을 변수로 넣지 말고 파일 경로를 참조하게 함)
+          cat <<EOF > rclone.conf
+          [GDRIVE]
+          type = drive
+          scope = drive
+          service_account_file = ./sa_key.json
+          EOF
+          
+          # 4. 데이터 전송 실행
           rclone --config ./rclone.conf copy ./laws GDRIVE:laws-folder
-        env:
-          # 메리아스의 금고 이름인 GDRIVE_SA_JSON을 사용함
-          GDRIVE_JSON: ${{ secrets.GDRIVE_SA_JSON }}
