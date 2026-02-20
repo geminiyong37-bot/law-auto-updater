@@ -43,8 +43,9 @@ jobs:
           name: law-files-snapshot
           path: laws/
 
-      - name: Get File List
-        run: |
-          # 파일 경로 하나하나를 따옴표로 감싸서 전달
-          FILES=$(find laws -type f -name "*.md" | sed "s/.*/'&'/" | tr '\n' ',')
-          echo "FILES=${FILES%,}" >> $GITHUB_ENV
+      - name: Run Law Update Script
+        run: python update_laws.py
+        env:
+          LAW_API_KEY: ${{ secrets.LAW_API_KEY }}
+          GDRIVE_JSON_RAW: ${{ secrets.GDRIVE_SA_JSON_RAW }} # JSON 원본
+          GDRIVE_FOLDER_ID: "16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q"
