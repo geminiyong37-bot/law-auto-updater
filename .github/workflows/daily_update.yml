@@ -1,0 +1,31 @@
+# .github/workflows/daily_update.yml
+name: Daily Law Update
+
+on:
+  schedule:
+    - cron: '0 19 * * *' # 한국 시간 매일 새벽 4시
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+      - name: Install dependencies
+        run: pip install requests
+      - name: Run script
+        run: python update_laws.py
+      - name: Commit and Push
+        run: |
+          git config --global user.name "AutoUpdater"
+          git add .
+          git commit -m "Update laws" || exit 0
+          git push
+      - name: Sync to Google Drive
+        uses: wei/rclone@v1
+        env:
+          RCLONE_CONFIG_DRIVE_TYPE: drive
+          RCLONE_CONFIG_DRIVE_SERVICE_ACCOUNT_CONTENTS: ${{ secrets.GDRIVE_CREDENTIALS }}
+        with:
+          args: copy ./laws gdrive:laws_folder
