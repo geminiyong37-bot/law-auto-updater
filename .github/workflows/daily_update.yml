@@ -32,4 +32,5 @@ jobs:
           RCLONE_CONFIG_GDRIVE_SCOPE: drive
           RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CONTENTS: ${{ secrets.GDRIVE_SA_JSON }}
         with:
-          args: copy ./laws gdrive:16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q --drive-use-trash=false --drive-upload-cutoff=0
+          # laws 폴더의 파일들을 지정된 ID의 폴더로 복사
+          args: copy ./laws gdrive:16zT278nodzMpY-XIM3cn-fBAIrfR8I3Q --drive-upload-cutoff=0
